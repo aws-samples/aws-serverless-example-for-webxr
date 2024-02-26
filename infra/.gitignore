@@ -1,0 +1,5 @@
+node_modules
+cdk.out/*
+__pycache__
+**/.venv
+**/.DS_Store

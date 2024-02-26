@@ -1,0 +1,23 @@
+{
+  "Storage": {
+      "AWSS3": {
+          "bucket": "mainstack-storagebucket19db2ff8-9ft8bw8w975s"
+      }
+  },
+  "Auth": {
+      "userPoolWebClientId": "18csaa9luikdpa3rpicaef5qd5",
+      "region": "us-west-2",
+      "identityPoolId": "us-west-2:70ee2ecd-eedb-407f-b8f8-d55383b20c31",
+      "userPoolId": "us-west-2_av6bKwseQ",
+      "mandatorySignIn": "true"
+  },
+  "API": {
+      "endpoints": [
+          {
+              "endpoint": "https://olwq3i93lc.execute-api.us-west-2.amazonaws.com/dev/",
+              "name": "gateway_G",
+              "region": "us-west-2"
+          }
+      ]
+  }
+}

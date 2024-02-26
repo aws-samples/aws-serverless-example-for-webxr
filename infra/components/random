@@ -1,0 +1,1272 @@
+leaderboard
+Resources:
+  StorageBucket19DB2FF8:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders:
+              - "*"
+            AllowedMethods:
+              - GET
+              - POST
+              - PUT
+            AllowedOrigins:
+              - "*"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+        - Key: aws-cdk:auto-delete-objects
+          Value: "true"
+      VersioningConfiguration:
+        Status: Enabled
+    UpdateReplacePolicy: Delete
+    DeletionPolicy: Delete
+    Metadata:
+      aws:cdk:path: MainStack/StorageBucket/Resource
+  StorageBucketPolicy41A048DB:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket:
+        Ref: StorageBucket19DB2FF8
+      PolicyDocument:
+        Statement:
+          - Action: s3:*
+            Condition:
+              Bool:
+                aws:SecureTransport: "false"
+            Effect: Deny
+            Principal:
+              AWS: "*"
+            Resource:
+              - Fn::GetAtt:
+                  - StorageBucket19DB2FF8
+                  - Arn
+              - Fn::Join:
+                  - ""
+                  - - Fn::GetAtt:
+                        - StorageBucket19DB2FF8
+                        - Arn
+                    - /*
+          - Action:
+              - s3:DeleteObject*
+              - s3:GetBucket*
+              - s3:List*
+            Effect: Allow
+            Principal:
+              AWS:
+                Fn::GetAtt:
+                  - CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092
+                  - Arn
+            Resource:
+              - Fn::GetAtt:
+                  - StorageBucket19DB2FF8
+                  - Arn
+              - Fn::Join:
+                  - ""
+                  - - Fn::GetAtt:
+                        - StorageBucket19DB2FF8
+                        - Arn
+                    - /*
+        Version: "2012-10-17"
+    Metadata:
+      aws:cdk:path: MainStack/StorageBucket/Policy/Resource
+  StorageBucketAutoDeleteObjectsCustomResource105C81BD:
+    Type: Custom::S3AutoDeleteObjects
+    Properties:
+      ServiceToken:
+        Fn::GetAtt:
+          - CustomS3AutoDeleteObjectsCustomResourceProviderHandler9D90184F
+          - Arn
+      BucketName:
+        Ref: StorageBucket19DB2FF8
+    DependsOn:
+      - StorageBucketPolicy41A048DB
+    UpdateReplacePolicy: Delete
+    DeletionPolicy: Delete
+    Metadata:
+      aws:cdk:path: MainStack/StorageBucket/AutoDeleteObjectsCustomResource/Default
+  CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+      ManagedPolicyArns:
+        - Fn::Sub: arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+    Metadata:
+      aws:cdk:path: MainStack/Custom::S3AutoDeleteObjectsCustomResourceProvider/Role
+  CustomS3AutoDeleteObjectsCustomResourceProviderHandler9D90184F:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket:
+          Fn::Sub: cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}
+        S3Key: a657308e723bb9460b800cb3b47dadb74e28243edfe246bf7755c45ec312eb97.zip
+      Timeout: 900
+      MemorySize: 128
+      Handler: index.handler
+      Role:
+        Fn::GetAtt:
+          - CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092
+          - Arn
+      Runtime: nodejs18.x
+      Description:
+        Fn::Join:
+          - ""
+          - - "Lambda function for auto-deleting objects in "
+            - Ref: StorageBucket19DB2FF8
+            - " S3 bucket."
+    DependsOn:
+      - CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092
+    Metadata:
+      aws:cdk:path: MainStack/Custom::S3AutoDeleteObjectsCustomResourceProvider/Handler
+      aws:asset:path: asset.a657308e723bb9460b800cb3b47dadb74e28243edfe246bf7755c45ec312eb97
+      aws:asset:property: Code
+  StorageDatabase12F3E96E:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: bucket
+          AttributeType: S
+        - AttributeName: key
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: bucket
+          KeyType: HASH
+        - AttributeName: key
+          KeyType: RANGE
+    UpdateReplacePolicy: Delete
+    DeletionPolicy: Delete
+    Metadata:
+      aws:cdk:path: MainStack/StorageDatabase/Resource
+  LeaderboardDatabase1341F1A0:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: playerId
+          AttributeType: S
+        - AttributeName: status
+          AttributeType: "N"
+        - AttributeName: score
+          AttributeType: "N"
+      BillingMode: PAY_PER_REQUEST
+      GlobalSecondaryIndexes:
+        - IndexName: rankingIndex
+          KeySchema:
+            - AttributeName: status
+              KeyType: HASH
+            - AttributeName: score
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      KeySchema:
+        - AttributeName: playerId
+          KeyType: HASH
+    UpdateReplacePolicy: Delete
+    DeletionPolicy: Delete
+    Metadata:
+      aws:cdk:path: MainStack/LeaderboardDatabase/Resource
+  getAssetLambdaNestedStackgetAssetLambdaNestedStackResourceAFA614F8:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL:
+        Fn::Join:
+          - ""
+          - - https://s3.
+            - Ref: AWS::Region
+            - "."
+            - Ref: AWS::URLSuffix
+            - /
+            - Fn::Sub: cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}
+            - /893cf2be054d9c57ac2608ec7d49769bfca32cec2891d116824e2e50eebc508f.json
+    UpdateReplacePolicy: Delete
+    DeletionPolicy: Delete
+    Metadata:
+      aws:cdk:path: MainStack/getAssetLambda.NestedStack/getAssetLambda.NestedStackResource
+      aws:asset:path: MainStackgetAssetLambda18EB265F.nested.template.json
+      aws:asset:property: TemplateURL
+  getAssetLambdaFUNCServiceRole501FADDB:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+        Version: "2012-10-17"
+      ManagedPolicyArns:
+        - Fn::Join:
+            - ""
+            - - "arn:"
+              - Ref: AWS::Partition
+              - :iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+    Metadata:
+      aws:cdk:path: MainStack/getAssetLambda_FUNC/ServiceRole/Resource
+  getAssetLambdaFUNCServiceRoleDefaultPolicy12FA6BA5:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - s3:Abort*
+              - s3:DeleteObject*
+              - s3:GetBucket*
+              - s3:GetObject*
+              - s3:List*
+              - s3:PutObject
+              - s3:PutObjectLegalHold
+              - s3:PutObjectRetention
+              - s3:PutObjectTagging
+              - s3:PutObjectVersionTagging
+            Effect: Allow
+            Resource:
+              - Fn::GetAtt:
+                  - StorageBucket19DB2FF8
+                  - Arn
+              - Fn::Join:
+                  - ""
+                  - - Fn::GetAtt:
+                        - StorageBucket19DB2FF8
+                        - Arn
+                    - /*
+          - Action:
+              - dynamodb:BatchGetItem
+              - dynamodb:BatchWriteItem
+              - dynamodb:ConditionCheckItem
+              - dynamodb:DeleteItem
+              - dynamodb:DescribeTable
+              - dynamodb:GetItem
+              - dynamodb:GetRecords
+              - dynamodb:GetShardIterator
+              - dynamodb:PutItem
+              - dynamodb:Query
+              - dynamodb:Scan
+              - dynamodb:UpdateItem
+            Effect: Allow
+            Resource:
+              - Fn::GetAtt:
+                  - StorageDatabase12F3E96E
+                  - Arn
+              - Ref: AWS::NoValue
+        Version: "2012-10-17"
+      PolicyName: getAssetLambdaFUNCServiceRoleDefaultPolicy12FA6BA5
+      Roles:
+        - Ref: getAssetLambdaFUNCServiceRole501FADDB
+    Metadata:
+      aws:cdk:path: MainStack/getAssetLambda_FUNC/ServiceRole/DefaultPolicy/Resource
+  getAssetLambdaFUNCC6E07DD3:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket:
+          Fn::Sub: cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}
+        S3Key: f4da1bc7a5da73fbde187f86290914bc44d0266efb816b864a15e3c88df9c435.zip
+      Environment:
+        Variables:
+          BUCKET_NAME:
+            Ref: StorageBucket19DB2FF8
+          TABLE_NAME:
+            Ref: StorageDatabase12F3E96E
+      EphemeralStorage:
+        Size: 512
+      Handler: ../lambdaScripts/getAssethandler
+      MemorySize: 512
+      Role:
+        Fn::GetAtt:
+          - getAssetLambdaFUNCServiceRole501FADDB
+          - Arn
+      Runtime: nodejs18.x
+      Timeout: 300
+    DependsOn:
+      - getAssetLambdaFUNCServiceRoleDefaultPolicy12FA6BA5
+      - getAssetLambdaFUNCServiceRole501FADDB
+    Metadata:
+      aws:cdk:path: MainStack/getAssetLambda_FUNC/Resource
+      aws:asset:path: asset.f4da1bc7a5da73fbde187f86290914bc44d0266efb816b864a15e3c88df9c435
+      aws:asset:is-bundled: false
+      aws:asset:property: Code
+  getPlayerInfoLambdaNestedStackgetPlayerInfoLambdaNestedStackResourceA2E5347A:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL:
+        Fn::Join:
+          - ""
+          - - https://s3.
+            - Ref: AWS::Region
+            - "."
+            - Ref: AWS::URLSuffix
+            - /
+            - Fn::Sub: cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}
+            - /5bae4228f8a6cfb137d011c7e2f762175b4d1b8c6b4f987058a85688fa7e9e7d.json
+    UpdateReplacePolicy: Delete
+    DeletionPolicy: Delete
+    Metadata:
+      aws:cdk:path: MainStack/getPlayerInfoLambda.NestedStack/getPlayerInfoLambda.NestedStackResource
+      aws:asset:path: MainStackgetPlayerInfoLambda21E80A21.nested.template.json
+      aws:asset:property: TemplateURL
+  getPlayerInfoLambdaFUNCServiceRole3009444E:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+        Version: "2012-10-17"
+      ManagedPolicyArns:
+        - Fn::Join:
+            - ""
+            - - "arn:"
+              - Ref: AWS::Partition
+              - :iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+    Metadata:
+      aws:cdk:path: MainStack/getPlayerInfoLambda_FUNC/ServiceRole/Resource
+  getPlayerInfoLambdaFUNCServiceRoleDefaultPolicy588944D8:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - dynamodb:BatchGetItem
+              - dynamodb:ConditionCheckItem
+              - dynamodb:DescribeTable
+              - dynamodb:GetItem
+              - dynamodb:GetRecords
+              - dynamodb:GetShardIterator
+              - dynamodb:Query
+              - dynamodb:Scan
+            Effect: Allow
+            Resource:
+              - Fn::GetAtt:
+                  - LeaderboardDatabase1341F1A0
+                  - Arn
+              - Fn::Join:
+                  - ""
+                  - - Fn::GetAtt:
+                        - LeaderboardDatabase1341F1A0
+                        - Arn
+                    - /index/*
+        Version: "2012-10-17"
+      PolicyName: getPlayerInfoLambdaFUNCServiceRoleDefaultPolicy588944D8
+      Roles:
+        - Ref: getPlayerInfoLambdaFUNCServiceRole3009444E
+    Metadata:
+      aws:cdk:path: MainStack/getPlayerInfoLambda_FUNC/ServiceRole/DefaultPolicy/Resource
+  getPlayerInfoLambdaFUNC204EF2E9:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket:
+          Fn::Sub: cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}
+        S3Key: 0e20dabd94b24d362c62bd22c2209a7cafd1d506672c808da8ea58f64830eb43.zip
+      Environment:
+        Variables:
+          TABLE_NAME:
+            Ref: LeaderboardDatabase1341F1A0
+      EphemeralStorage:
+        Size: 512
+      Handler: ../lambdaScripts/getPlayerInfohandler
+      MemorySize: 512
+      Role:
+        Fn::GetAtt:
+          - getPlayerInfoLambdaFUNCServiceRole3009444E
+          - Arn
+      Runtime: nodejs18.x
+      Timeout: 300
+    DependsOn:
+      - getPlayerInfoLambdaFUNCServiceRoleDefaultPolicy588944D8
+      - getPlayerInfoLambdaFUNCServiceRole3009444E
+    Metadata:
+      aws:cdk:path: MainStack/getPlayerInfoLambda_FUNC/Resource
+      aws:asset:path: asset.0e20dabd94b24d362c62bd22c2209a7cafd1d506672c808da8ea58f64830eb43
+      aws:asset:is-bundled: false
+      aws:asset:property: Code
+  putPlayerRecordLambdaNestedStackputPlayerRecordLambdaNestedStackResource27FD37F4:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL:
+        Fn::Join:
+          - ""
+          - - https://s3.
+            - Ref: AWS::Region
+            - "."
+            - Ref: AWS::URLSuffix
+            - /
+            - Fn::Sub: cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}
+            - /3ea16c63ac1ba745451d1e7867b168b6cfdc30b605b70afca6f9e179afa5c09d.json
+    UpdateReplacePolicy: Delete
+    DeletionPolicy: Delete
+    Metadata:
+      aws:cdk:path: MainStack/putPlayerRecordLambda.NestedStack/putPlayerRecordLambda.NestedStackResource
+      aws:asset:path: MainStackputPlayerRecordLambda816B5F6B.nested.template.json
+      aws:asset:property: TemplateURL
+  putPlayerRecordLambdaFUNCServiceRole30A39759:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+        Version: "2012-10-17"
+      ManagedPolicyArns:
+        - Fn::Join:
+            - ""
+            - - "arn:"
+              - Ref: AWS::Partition
+              - :iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+    Metadata:
+      aws:cdk:path: MainStack/putPlayerRecordLambda_FUNC/ServiceRole/Resource
+  putPlayerRecordLambdaFUNCServiceRoleDefaultPolicy30A51374:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - dynamodb:BatchGetItem
+              - dynamodb:BatchWriteItem
+              - dynamodb:ConditionCheckItem
+              - dynamodb:DeleteItem
+              - dynamodb:DescribeTable
+              - dynamodb:GetItem
+              - dynamodb:GetRecords
+              - dynamodb:GetShardIterator
+              - dynamodb:PutItem
+              - dynamodb:Query
+              - dynamodb:Scan
+              - dynamodb:UpdateItem
+            Effect: Allow
+            Resource:
+              - Fn::GetAtt:
+                  - LeaderboardDatabase1341F1A0
+                  - Arn
+              - Fn::Join:
+                  - ""
+                  - - Fn::GetAtt:
+                        - LeaderboardDatabase1341F1A0
+                        - Arn
+                    - /index/*
+        Version: "2012-10-17"
+      PolicyName: putPlayerRecordLambdaFUNCServiceRoleDefaultPolicy30A51374
+      Roles:
+        - Ref: putPlayerRecordLambdaFUNCServiceRole30A39759
+    Metadata:
+      aws:cdk:path: MainStack/putPlayerRecordLambda_FUNC/ServiceRole/DefaultPolicy/Resource
+  putPlayerRecordLambdaFUNC28F5A24A:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket:
+          Fn::Sub: cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}
+        S3Key: 7ecb07057ea7883cdbd040efdffc5962b8059dcb680da1bb469fa39581b9c3fa.zip
+      Environment:
+        Variables:
+          TABLE_NAME:
+            Ref: LeaderboardDatabase1341F1A0
+      EphemeralStorage:
+        Size: 512
+      Handler: ../lambdaScripts/putPlayerRecordhandler
+      MemorySize: 512
+      Role:
+        Fn::GetAtt:
+          - putPlayerRecordLambdaFUNCServiceRole30A39759
+          - Arn
+      Runtime: nodejs18.x
+      Timeout: 300
+    DependsOn:
+      - putPlayerRecordLambdaFUNCServiceRoleDefaultPolicy30A51374
+      - putPlayerRecordLambdaFUNCServiceRole30A39759
+    Metadata:
+      aws:cdk:path: MainStack/putPlayerRecordLambda_FUNC/Resource
+      aws:asset:path: asset.7ecb07057ea7883cdbd040efdffc5962b8059dcb680da1bb469fa39581b9c3fa
+      aws:asset:is-bundled: false
+      aws:asset:property: Code
+  authNestedStackauthNestedStackResource179371D7:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL:
+        Fn::Join:
+          - ""
+          - - https://s3.
+            - Ref: AWS::Region
+            - "."
+            - Ref: AWS::URLSuffix
+            - /
+            - Fn::Sub: cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}
+            - /ae67329c45ffdbc7d00c8847b0ca97df77e274bbd7197e03085fda6ec4c6b0f3.json
+    UpdateReplacePolicy: Delete
+    DeletionPolicy: Delete
+    Metadata:
+      aws:cdk:path: MainStack/auth.NestedStack/auth.NestedStackResource
+      aws:asset:path: MainStackauth55F35753.nested.template.json
+      aws:asset:property: TemplateURL
+  authUserPoolD8865A5A:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      AccountRecoverySetting:
+        RecoveryMechanisms:
+          - Name: verified_phone_number
+            Priority: 1
+          - Name: verified_email
+            Priority: 2
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: true
+      EmailVerificationMessage: The verification code to your new account is {####}
+      EmailVerificationSubject: Verify your new account
+      SmsVerificationMessage: The verification code to your new account is {####}
+      VerificationMessageTemplate:
+        DefaultEmailOption: CONFIRM_WITH_CODE
+        EmailMessage: The verification code to your new account is {####}
+        EmailSubject: Verify your new account
+        SmsMessage: The verification code to your new account is {####}
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
+    Metadata:
+      aws:cdk:path: MainStack/auth_UserPool/Resource
+  authUserPoolauthClient4B878CA4:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      AllowedOAuthFlows:
+        - implicit
+        - code
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthScopes:
+        - profile
+        - phone
+        - email
+        - openid
+        - aws.cognito.signin.user.admin
+      CallbackURLs:
+        - https://example.com
+      ExplicitAuthFlows:
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+      SupportedIdentityProviders:
+        - COGNITO
+      UserPoolId:
+        Ref: authUserPoolD8865A5A
+    Metadata:
+      aws:cdk:path: MainStack/auth_UserPool/auth_Client/Resource
+  authIdPool:
+    Type: AWS::Cognito::IdentityPool
+    Properties:
+      AllowUnauthenticatedIdentities: false
+      CognitoIdentityProviders:
+        - ClientId:
+            Ref: authUserPoolauthClient4B878CA4
+          ProviderName:
+            Fn::GetAtt:
+              - authUserPoolD8865A5A
+              - ProviderName
+    Metadata:
+      aws:cdk:path: MainStack/auth_IdPool
+  authCognitoDefaultUnauthenticatedRole22644C1B:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                cognito-identity.amazonaws.com:aud:
+                  Ref: authIdPool
+              ForAnyValue:StringLike:
+                cognito-identity.amazonaws.com:amr: unauthenticated
+            Effect: Allow
+            Principal:
+              Federated: cognito-identity.amazonaws.com
+        Version: "2012-10-17"
+    Metadata:
+      aws:cdk:path: MainStack/auth_CognitoDefaultUnauthenticatedRole/Resource
+  authCognitoDefaultUnauthenticatedRoleDefaultPolicy1245D996:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - cognito-sync:*
+              - mobileanalytics:PutEvents
+            Effect: Allow
+            Resource: "*"
+        Version: "2012-10-17"
+      PolicyName: authCognitoDefaultUnauthenticatedRoleDefaultPolicy1245D996
+      Roles:
+        - Ref: authCognitoDefaultUnauthenticatedRole22644C1B
+    Metadata:
+      aws:cdk:path: MainStack/auth_CognitoDefaultUnauthenticatedRole/DefaultPolicy/Resource
+  authCognitoDefaultAuthenticatedRoleAE4DB78F:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                cognito-identity.amazonaws.com:aud:
+                  Ref: authIdPool
+              ForAnyValue:StringLike:
+                cognito-identity.amazonaws.com:amr: authenticated
+            Effect: Allow
+            Principal:
+              Federated: cognito-identity.amazonaws.com
+        Version: "2012-10-17"
+    Metadata:
+      aws:cdk:path: MainStack/auth_CognitoDefaultAuthenticatedRole/Resource
+  authCognitoDefaultAuthenticatedRoleDefaultPolicy6A4115EA:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - cognito-identity:*
+              - cognito-sync:*
+              - mobileanalytics:PutEvents
+            Effect: Allow
+            Resource: "*"
+        Version: "2012-10-17"
+      PolicyName: authCognitoDefaultAuthenticatedRoleDefaultPolicy6A4115EA
+      Roles:
+        - Ref: authCognitoDefaultAuthenticatedRoleAE4DB78F
+    Metadata:
+      aws:cdk:path: MainStack/auth_CognitoDefaultAuthenticatedRole/DefaultPolicy/Resource
+  authCognitoRolesAttachment:
+    Type: AWS::Cognito::IdentityPoolRoleAttachment
+    Properties:
+      IdentityPoolId:
+        Ref: authIdPool
+      Roles:
+        unauthenticated:
+          Fn::GetAtt:
+            - authCognitoDefaultUnauthenticatedRole22644C1B
+            - Arn
+        authenticated:
+          Fn::GetAtt:
+            - authCognitoDefaultAuthenticatedRoleAE4DB78F
+            - Arn
+    Metadata:
+      aws:cdk:path: MainStack/auth_CognitoRolesAttachment
+  AdminUser:
+    Type: AWS::Cognito::UserPoolUser
+    Properties:
+      DesiredDeliveryMediums:
+        - EMAIL
+      UserAttributes:
+        - Name: email
+          Value:
+            Ref: AdminEmail
+      UserPoolId:
+        Ref: authUserPoolD8865A5A
+      Username:
+        Ref: AdminEmail
+    Metadata:
+      aws:cdk:path: MainStack/AdminUser
+  gatewayNestedStackgatewayNestedStackResource57DC6574:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL:
+        Fn::Join:
+          - ""
+          - - https://s3.
+            - Ref: AWS::Region
+            - "."
+            - Ref: AWS::URLSuffix
+            - /
+            - Fn::Sub: cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}
+            - /63c1386d9aec86a739119e77b4965a21d2d74b2ca67fa5bcfb0674a97cecf9a4.json
+    UpdateReplacePolicy: Delete
+    DeletionPolicy: Delete
+    Metadata:
+      aws:cdk:path: MainStack/gateway.NestedStack/gateway.NestedStackResource
+      aws:asset:path: MainStackgateway21E13830.nested.template.json
+      aws:asset:property: TemplateURL
+  gatewayG47300FE6:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Description: Main Stack Gateway
+      Name: gateway_G
+    Metadata:
+      aws:cdk:path: MainStack/gateway_G/Resource
+  gatewayGDeployment5E93F03F044f5f0288b98b63f8acb52a677ed0e1:
+    Type: AWS::ApiGateway::Deployment
+    Properties:
+      Description: Main Stack Gateway
+      RestApiId:
+        Ref: gatewayG47300FE6
+    DependsOn:
+      - APIAuthorizerD0FB420A
+      - gatewayGassetsGET00783025
+      - gatewayGassetsOPTIONSC674CFA9
+      - gatewayGassetsB91348E1
+      - gatewayGleaderboardplayerIdGETFBECD330
+      - gatewayGleaderboardplayerIdOPTIONS0DC6B243
+      - gatewayGleaderboardplayerIdDA8E7DBB
+      - gatewayGleaderboardOPTIONS693C9B63
+      - gatewayGleaderboardPOST977C6E1A
+      - gatewayGleaderboard21E1EA44
+      - gatewayGOPTIONSE8FAB1E4
+    Metadata:
+      aws:cdk:path: MainStack/gateway_G/Deployment/Resource
+  gatewayGDeploymentStagedev5D60EE63:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      DeploymentId:
+        Ref: gatewayGDeployment5E93F03F044f5f0288b98b63f8acb52a677ed0e1
+      RestApiId:
+        Ref: gatewayG47300FE6
+      StageName: dev
+    Metadata:
+      aws:cdk:path: MainStack/gateway_G/DeploymentStage.dev/Resource
+  gatewayGOPTIONSE8FAB1E4:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ApiKeyRequired: false
+      AuthorizationType: NONE
+      HttpMethod: OPTIONS
+      Integration:
+        IntegrationResponses:
+          - ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'X-Amz-Date,Origin,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Methods: "'OPTIONS,GET,POST'"
+              method.response.header.Access-Control-Allow-Credentials: "'true'"
+            StatusCode: "204"
+        RequestTemplates:
+          application/json: "{ statusCode: 200 }"
+        Type: MOCK
+      MethodResponses:
+        - ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Credentials: true
+          StatusCode: "204"
+      ResourceId:
+        Fn::GetAtt:
+          - gatewayG47300FE6
+          - RootResourceId
+      RestApiId:
+        Ref: gatewayG47300FE6
+    Metadata:
+      aws:cdk:path: MainStack/gateway_G/Default/OPTIONS/Resource
+  gatewayGassetsB91348E1:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId:
+        Fn::GetAtt:
+          - gatewayG47300FE6
+          - RootResourceId
+      PathPart: assets
+      RestApiId:
+        Ref: gatewayG47300FE6
+    Metadata:
+      aws:cdk:path: MainStack/gateway_G/Default/assets/Resource
+  gatewayGassetsOPTIONSC674CFA9:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ApiKeyRequired: false
+      AuthorizationType: NONE
+      HttpMethod: OPTIONS
+      Integration:
+        IntegrationResponses:
+          - ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'X-Amz-Date,Origin,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Methods: "'OPTIONS,GET,POST'"
+              method.response.header.Access-Control-Allow-Credentials: "'true'"
+            StatusCode: "204"
+        RequestTemplates:
+          application/json: "{ statusCode: 200 }"
+        Type: MOCK
+      MethodResponses:
+        - ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Credentials: true
+          StatusCode: "204"
+      ResourceId:
+        Ref: gatewayGassetsB91348E1
+      RestApiId:
+        Ref: gatewayG47300FE6
+    Metadata:
+      aws:cdk:path: MainStack/gateway_G/Default/assets/OPTIONS/Resource
+  gatewayGassetsGETApiPermissionMainStackgatewayG51C479A6GETassetsDD028F4D:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName:
+        Fn::GetAtt:
+          - getAssetLambdaFUNCC6E07DD3
+          - Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Join:
+          - ""
+          - - "arn:"
+            - Ref: AWS::Partition
+            - ":execute-api:"
+            - Ref: AWS::Region
+            - ":"
+            - Ref: AWS::AccountId
+            - ":"
+            - Ref: gatewayG47300FE6
+            - /
+            - Ref: gatewayGDeploymentStagedev5D60EE63
+            - /GET/assets
+    Metadata:
+      aws:cdk:path: MainStack/gateway_G/Default/assets/GET/ApiPermission.MainStackgatewayG51C479A6.GET..assets
+  gatewayGassetsGETApiPermissionTestMainStackgatewayG51C479A6GETassetsD2780EFD:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName:
+        Fn::GetAtt:
+          - getAssetLambdaFUNCC6E07DD3
+          - Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Join:
+          - ""
+          - - "arn:"
+            - Ref: AWS::Partition
+            - ":execute-api:"
+            - Ref: AWS::Region
+            - ":"
+            - Ref: AWS::AccountId
+            - ":"
+            - Ref: gatewayG47300FE6
+            - /test-invoke-stage/GET/assets
+    Metadata:
+      aws:cdk:path: MainStack/gateway_G/Default/assets/GET/ApiPermission.Test.MainStackgatewayG51C479A6.GET..assets
+  gatewayGassetsGET00783025:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId:
+        Ref: APIAuthorizerD0FB420A
+      HttpMethod: GET
+      Integration:
+        IntegrationHttpMethod: POST
+        Type: AWS_PROXY
+        Uri:
+          Fn::Join:
+            - ""
+            - - "arn:"
+              - Ref: AWS::Partition
+              - ":apigateway:"
+              - Ref: AWS::Region
+              - :lambda:path/2015-03-31/functions/
+              - Fn::GetAtt:
+                  - getAssetLambdaFUNCC6E07DD3
+                  - Arn
+              - /invocations
+      ResourceId:
+        Ref: gatewayGassetsB91348E1
+      RestApiId:
+        Ref: gatewayG47300FE6
+    Metadata:
+      aws:cdk:path: MainStack/gateway_G/Default/assets/GET/Resource
+  gatewayGleaderboard21E1EA44:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId:
+        Fn::GetAtt:
+          - gatewayG47300FE6
+          - RootResourceId
+      PathPart: leaderboard
+      RestApiId:
+        Ref: gatewayG47300FE6
+    Metadata:
+      aws:cdk:path: MainStack/gateway_G/Default/leaderboard/Resource
+  gatewayGleaderboardOPTIONS693C9B63:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ApiKeyRequired: false
+      AuthorizationType: NONE
+      HttpMethod: OPTIONS
+      Integration:
+        IntegrationResponses:
+          - ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'X-Amz-Date,Origin,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Methods: "'OPTIONS,GET,POST'"
+              method.response.header.Access-Control-Allow-Credentials: "'true'"
+            StatusCode: "204"
+        RequestTemplates:
+          application/json: "{ statusCode: 200 }"
+        Type: MOCK
+      MethodResponses:
+        - ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Credentials: true
+          StatusCode: "204"
+      ResourceId:
+        Ref: gatewayGleaderboard21E1EA44
+      RestApiId:
+        Ref: gatewayG47300FE6
+    Metadata:
+      aws:cdk:path: MainStack/gateway_G/Default/leaderboard/OPTIONS/Resource
+  gatewayGleaderboardPOSTApiPermissionMainStackgatewayG51C479A6POSTleaderboardF6897F5A:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName:
+        Fn::GetAtt:
+          - putPlayerRecordLambdaFUNC28F5A24A
+          - Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Join:
+          - ""
+          - - "arn:"
+            - Ref: AWS::Partition
+            - ":execute-api:"
+            - Ref: AWS::Region
+            - ":"
+            - Ref: AWS::AccountId
+            - ":"
+            - Ref: gatewayG47300FE6
+            - /
+            - Ref: gatewayGDeploymentStagedev5D60EE63
+            - /POST/leaderboard
+    Metadata:
+      aws:cdk:path: MainStack/gateway_G/Default/leaderboard/POST/ApiPermission.MainStackgatewayG51C479A6.POST..leaderboard
+  gatewayGleaderboardPOSTApiPermissionTestMainStackgatewayG51C479A6POSTleaderboard6AC3ED45:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName:
+        Fn::GetAtt:
+          - putPlayerRecordLambdaFUNC28F5A24A
+          - Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Join:
+          - ""
+          - - "arn:"
+            - Ref: AWS::Partition
+            - ":execute-api:"
+            - Ref: AWS::Region
+            - ":"
+            - Ref: AWS::AccountId
+            - ":"
+            - Ref: gatewayG47300FE6
+            - /test-invoke-stage/POST/leaderboard
+    Metadata:
+      aws:cdk:path: MainStack/gateway_G/Default/leaderboard/POST/ApiPermission.Test.MainStackgatewayG51C479A6.POST..leaderboard
+  gatewayGleaderboardPOST977C6E1A:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId:
+        Ref: APIAuthorizerD0FB420A
+      HttpMethod: POST
+      Integration:
+        IntegrationHttpMethod: POST
+        Type: AWS_PROXY
+        Uri:
+          Fn::Join:
+            - ""
+            - - "arn:"
+              - Ref: AWS::Partition
+              - ":apigateway:"
+              - Ref: AWS::Region
+              - :lambda:path/2015-03-31/functions/
+              - Fn::GetAtt:
+                  - putPlayerRecordLambdaFUNC28F5A24A
+                  - Arn
+              - /invocations
+      ResourceId:
+        Ref: gatewayGleaderboard21E1EA44
+      RestApiId:
+        Ref: gatewayG47300FE6
+    Metadata:
+      aws:cdk:path: MainStack/gateway_G/Default/leaderboard/POST/Resource
+  gatewayGleaderboardplayerIdDA8E7DBB:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId:
+        Ref: gatewayGleaderboard21E1EA44
+      PathPart: "{playerId}"
+      RestApiId:
+        Ref: gatewayG47300FE6
+    Metadata:
+      aws:cdk:path: MainStack/gateway_G/Default/leaderboard/{playerId}/Resource
+  gatewayGleaderboardplayerIdOPTIONS0DC6B243:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ApiKeyRequired: false
+      AuthorizationType: NONE
+      HttpMethod: OPTIONS
+      Integration:
+        IntegrationResponses:
+          - ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'X-Amz-Date,Origin,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Methods: "'OPTIONS,GET,POST'"
+              method.response.header.Access-Control-Allow-Credentials: "'true'"
+            StatusCode: "204"
+        RequestTemplates:
+          application/json: "{ statusCode: 200 }"
+        Type: MOCK
+      MethodResponses:
+        - ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Credentials: true
+          StatusCode: "204"
+      ResourceId:
+        Ref: gatewayGleaderboardplayerIdDA8E7DBB
+      RestApiId:
+        Ref: gatewayG47300FE6
+    Metadata:
+      aws:cdk:path: MainStack/gateway_G/Default/leaderboard/{playerId}/OPTIONS/Resource
+  gatewayGleaderboardplayerIdGETApiPermissionMainStackgatewayG51C479A6GETleaderboardplayerIdDF3A5EF0:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName:
+        Fn::GetAtt:
+          - getPlayerInfoLambdaFUNC204EF2E9
+          - Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Join:
+          - ""
+          - - "arn:"
+            - Ref: AWS::Partition
+            - ":execute-api:"
+            - Ref: AWS::Region
+            - ":"
+            - Ref: AWS::AccountId
+            - ":"
+            - Ref: gatewayG47300FE6
+            - /
+            - Ref: gatewayGDeploymentStagedev5D60EE63
+            - /GET/leaderboard/*
+    Metadata:
+      aws:cdk:path: MainStack/gateway_G/Default/leaderboard/{playerId}/GET/ApiPermission.MainStackgatewayG51C479A6.GET..leaderboard.{playerId}
+  gatewayGleaderboardplayerIdGETApiPermissionTestMainStackgatewayG51C479A6GETleaderboardplayerId11B4B616:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName:
+        Fn::GetAtt:
+          - getPlayerInfoLambdaFUNC204EF2E9
+          - Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Join:
+          - ""
+          - - "arn:"
+            - Ref: AWS::Partition
+            - ":execute-api:"
+            - Ref: AWS::Region
+            - ":"
+            - Ref: AWS::AccountId
+            - ":"
+            - Ref: gatewayG47300FE6
+            - /test-invoke-stage/GET/leaderboard/*
+    Metadata:
+      aws:cdk:path: MainStack/gateway_G/Default/leaderboard/{playerId}/GET/ApiPermission.Test.MainStackgatewayG51C479A6.GET..leaderboard.{playerId}
+  gatewayGleaderboardplayerIdGETFBECD330:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId:
+        Ref: APIAuthorizerD0FB420A
+      HttpMethod: GET
+      Integration:
+        IntegrationHttpMethod: POST
+        Type: AWS_PROXY
+        Uri:
+          Fn::Join:
+            - ""
+            - - "arn:"
+              - Ref: AWS::Partition
+              - ":apigateway:"
+              - Ref: AWS::Region
+              - :lambda:path/2015-03-31/functions/
+              - Fn::GetAtt:
+                  - getPlayerInfoLambdaFUNC204EF2E9
+                  - Arn
+              - /invocations
+      ResourceId:
+        Ref: gatewayGleaderboardplayerIdDA8E7DBB
+      RestApiId:
+        Ref: gatewayG47300FE6
+    Metadata:
+      aws:cdk:path: MainStack/gateway_G/Default/leaderboard/{playerId}/GET/Resource
+  APIAuthorizerD0FB420A:
+    Type: AWS::ApiGateway::Authorizer
+    Properties:
+      IdentitySource: method.request.header.Authorization
+      Name: MainStackAPIAuthorizerD178160E
+      ProviderARNs:
+        - Fn::GetAtt:
+            - authUserPoolD8865A5A
+            - Arn
+      RestApiId:
+        Ref: gatewayG47300FE6
+      Type: COGNITO_USER_POOLS
+    Metadata:
+      aws:cdk:path: MainStack/API_Authorizer/Resource
+  CDKMetadata:
+    Type: AWS::CDK::Metadata
+    Properties:
+      Analytics: v2:deflate64:H4sIAAAAAAAA/21Sy07DMBD8Fu6uoRShXtMgJA6IqMC5cuMl3Ta2Iz9ahcj/jh0nJEWcdmZ39mnf0/Wa3t2wi1mU/LSocU+7d8vKEwmuXWdWtNu48gSW5F9yQMkUqsayndwDT2TDDHjCW8mE4qHkB9vXELU98KRmYs8Z7Z6dLC0qGUNzXIAWaExgniATtNuqlN/bqXVCnpjVjhkD1tAsGlKqSqJVtPs0oAul6ij+xSPIawRp56HJ88IDQNuOyXMeh8hsuNJB/MmP1hPWYMUsXFgbBgdjswb72Qf4BE2t2jF1xsLhq37LBIJeOV1CPCZ5BXtQPAYHNEaHygNOe4/jmMwFrcZv0FE2Me9J7oxV4v8qV6FCqzPyUKE/bRwNZXXVPn2Y+BxMMwE2dXtztnH9irmSHG3/mFJxoEdze14+0OVj+HlHg7jQLtxWAN0m+wPpX4SRlQIAAA==
+    Metadata:
+      aws:cdk:path: MainStack/CDKMetadata/Default
+    Condition: CDKMetadataAvailable
+Parameters:
+  AdminEmail:
+    Type: String
+    Description: A String should be here
+  BootstrapVersion:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /cdk-bootstrap/hnb659fds/version
+    Description: Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]
+Outputs:
+  gatewayGEndpoint5D1E33B9:
+    Value:
+      Fn::Join:
+        - ""
+        - - https://
+          - Ref: gatewayG47300FE6
+          - .execute-api.
+          - Ref: AWS::Region
+          - "."
+          - Ref: AWS::URLSuffix
+          - /
+          - Ref: gatewayGDeploymentStagedev5D60EE63
+          - /
+  APIRestURL:
+    Description: Restful API Gateway URL
+    Value:
+      Fn::Join:
+        - ""
+        - - '"https://'
+          - Ref: gatewayG47300FE6
+          - .execute-api.
+          - Ref: AWS::Region
+          - "."
+          - Ref: AWS::URLSuffix
+          - /
+          - Ref: gatewayGDeploymentStagedev5D60EE63
+          - /"
+  CLISetUserPasswordCommand:
+    Description: Configure admin password
+    Value:
+      Fn::Join:
+        - ""
+        - - '"aws cognito-idp admin-set-user-password --user-pool-id '
+          - Ref: authUserPoolD8865A5A
+          - " --permanent --username "
+          - Ref: AdminEmail
+          - ' --password {insert password}"'
+Conditions:
+  CDKMetadataAvailable:
+    Fn::Or:
+      - Fn::Or:
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - af-south-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - ap-east-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - ap-northeast-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - ap-northeast-2
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - ap-south-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - ap-southeast-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - ap-southeast-2
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - ca-central-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - cn-north-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - cn-northwest-1
+      - Fn::Or:
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - eu-central-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - eu-north-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - eu-south-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - eu-west-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - eu-west-2
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - eu-west-3
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - me-south-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - sa-east-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - us-east-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - us-east-2
+      - Fn::Or:
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - us-west-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - us-west-2
+Rules:
+  CheckBootstrapVersion:
+    Assertions:
+      - Assert:
+          Fn::Not:
+            - Fn::Contains:
+                - - "1"
+                  - "2"
+                  - "3"
+                  - "4"
+                  - "5"
+                - Ref: BootstrapVersion
+        AssertDescription: CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI.
+

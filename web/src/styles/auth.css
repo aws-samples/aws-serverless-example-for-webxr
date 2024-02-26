@@ -1,0 +1,92 @@
+/* authStyles.css */
+
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #f4f4f4;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+}
+
+#welcome-text {
+    font-size: 24px;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+#auth-container {
+    background: #fff;
+    padding: 20px 60px 15px 30px;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    width: 300px;
+    text-align: center;
+}
+
+input[type="text"],
+input[type="password"],
+input[type="email"] {
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+    outline: none;
+}
+
+button {
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    background-color: #007BFF;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+
+#facebookSignInButton {
+    background-color: #1877F2;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+#facebookSignInButton:hover {
+    background-color: #1664D1;
+}
+
+#message {
+    margin: 10px 0;
+    padding: 10px;
+    border-radius: 4px;
+    text-align: center;
+    font-size: 16px;
+    width: 80%;
+    margin-left: 10%;
+}
+
+#message.success {
+    color: #4CAF50;  /* green */
+    border: 1px solid #c7e6c1;
+    background-color: #e4f4e0;
+}
+
+#message.error {
+    color: #F44336;  /* red */
+    border: 1px solid #ebccd1;
+    background-color: #f2dede;
+}
