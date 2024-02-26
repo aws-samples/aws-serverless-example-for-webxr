@@ -1,5 +1,5 @@
 
-# Empower Your WebXR App Using AWS Serverless Services
+# Empower Your WebXR App Using AWS Serverless Architecture
 
 This repository contains an example solution on how to enhance your WebXR applications using AWS Serverless Services, providing scalable, efficient, and seamless user experiences.
 
